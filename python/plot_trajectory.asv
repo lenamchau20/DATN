@@ -2,10 +2,10 @@ clc; clear; close all;
 
 %% ====== CONFIG ======
 filenames = {
-    'logs2403/1obs_ree_0.01_1.csv'
-     'logs2403/1obs_ree_0.01_2.csv'
-     'logs2403/1obs_ree_0.01_3.csv'
-%      'logs2403/1obs_rho=5_1.csv'
+    'logs2403/1obs_rho_4.csv'
+%      'logs/1obs_rho_4.csv'
+%      'logs/1obs_rho_4.csv'
+%      'logs/1obs_ree_4.csv'
 %      'logs/1obs_ree_5.csv'
 };
 
@@ -14,7 +14,7 @@ target = [-0.475, 0.110, 0.200];
 
 % Obstacle
 obs_list = [
- -0.35, 0.112, 0.200;
+ -0.385, 0.112, 0.200;
 ];
 
 axes_list = [

@@ -10,10 +10,10 @@ rtde_r = RTDEReceiveInterface(IP)
 rtde_c = RTDEControlInterface(IP)
 
 # === THIẾT LẬP GHI DỮ LIỆU ===
-folder = "logs"
+folder = "logs2403"
 os.makedirs(folder, exist_ok=True)
 
-base_name = "1obs_ree"
+base_name = "1obs_ree_0.01"
 i = 1
 
 while True:
@@ -33,21 +33,22 @@ target = np.array([-0.475, 0.110, 0.200])
 
 # ===== OBSTACLE (ELLIPSOID) =====
 obs_list = [
-    np.array([-0.305, 0.108, 0.200]),
+    #np.array([-0.305, 0.108, 0.200]),
     #np.array([-0.385, 0.112, 0.200])
+    np.array([-0.35, 0.112, 0.200])
 ]
 
 axes_list = [
-    np.array([0.025, 0.025, 0.025]),
-    #np.array([0.02, 0.02, 0.02])
+    #np.array([0.025, 0.025, 0.025]),
+    np.array([0.02, 0.02, 0.02])
 ]
 
 rho_list = [
-    0.0001,
-    #1
+    #1,
+    0.01
 ]
 
-ree = 0.005
+ree = 0.05
 # ===== PARAM =====
 #techpendant velocity bar: 50% 
 kc = 0.5   
@@ -185,6 +186,15 @@ def modulatedDS(x, obs_list, axes_list, rho_list, ree):
 
     return M_total
 
+def check_collision(x, obs_list, axes_list, threshold=1.0):
+    for i in range(len(obs_list)):
+        g = gamma_distance(x, obs_list[i], axes_list[i])
+
+        if g <= threshold:
+            return True
+
+    return False
+
 # ===== MAIN LOOP =====
 try:
     step_count = 0
@@ -213,7 +223,17 @@ try:
                 pass
 
             break   # thoát while
+        
+         # ===== COLLISION CHECK =====
+        if check_collision(x_curr, obs_list, axes_list, threshold=1.0):
+            print("\n COLLISION WARNING!")
 
+            try:
+                rtde_c.speedStop()
+            except:
+                pass
+
+            break
         # ===== NOMINAL DS =====
         v_nominal = -kc * (x_curr - target)
 
@@ -236,7 +256,7 @@ try:
 
         # ===== SEND COMMAND =====
         cmd_vel = [v_safe[0], v_safe[1], v_safe[2], 0, 0, 0]
-        rtde_c.speedL(cmd_vel, acceleration=0.3, time=dt)
+        rtde_c.speedL(cmd_vel, acceleration=0.2, time=dt)
 
         # Print
         if step_count % int(1.0/dt) == 0:   # 1 giây in 1 lần

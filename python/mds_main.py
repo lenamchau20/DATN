@@ -10,10 +10,10 @@ rtde_r = RTDEReceiveInterface(IP)
 rtde_c = RTDEControlInterface(IP)
 
 # === THIẾT LẬP GHI DỮ LIỆU ===
-folder = "logs"
+folder = "logs2403"
 os.makedirs(folder, exist_ok=True)
 
-base_name = "1obs_rho"
+base_name = "1obs_rho=1"
 i = 1
 
 while True:
@@ -33,18 +33,19 @@ target = np.array([-0.475, 0.110, 0.200])
 
 # ===== OBSTACLE (ELLIPSOID) =====
 obs_list = [
-    np.array([-0.305, 0.105, 0.200]),
-    np.array([-0.385, 0.112, 0.200])
+    #np.array([-0.305, 0.105, 0.200]),
+    #np.array([-0.385, 0.112, 0.200]),
+    np.array([-0.35, 0.112, 0.200])
 ]
 
 axes_list = [
-    np.array([0.025, 0.025, 0.025]), #0.025
+    #np.array([0.025, 0.025, 0.025]), #0.025
     np.array([0.02, 0.02, 0.02])
 ]
 
 rho_list = [
-    1,
-    1
+    #1,
+    5
 ]
 
 # ===== PARAM =====
@@ -169,7 +170,6 @@ try:
         loop_start = time.time()
 
         t_start = rtde_c.initPeriod()
-        
 
         step_count += 1
         elapsed = step_count * dt
