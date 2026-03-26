@@ -13,7 +13,7 @@ rtde_c = RTDEControlInterface(IP)
 folder = "logs2403"
 os.makedirs(folder, exist_ok=True)
 
-base_name = "1obs_rho=1"
+base_name = "mds_test"
 i = 1
 
 while True:
@@ -35,7 +35,7 @@ target = np.array([-0.475, 0.110, 0.200])
 obs_list = [
     #np.array([-0.305, 0.105, 0.200]),
     #np.array([-0.385, 0.112, 0.200]),
-    np.array([-0.35, 0.112, 0.200])
+    np.array([-0.35, 0.110, 0.200])
 ]
 
 axes_list = [
@@ -45,7 +45,7 @@ axes_list = [
 
 rho_list = [
     #1,
-    5
+    1
 ]
 
 # ===== PARAM =====

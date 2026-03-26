@@ -2,9 +2,10 @@ clc; clear; close all;
 
 %% ====== CONFIG ======
 filenames = {
-    'logs2403/1obs_ree_0.01_1.csv'
-     'logs2403/1obs_ree_0.01_2.csv'
-     'logs2403/1obs_ree_0.01_3.csv'
+
+     'logs2603/2d_1obs_21.csv'
+%      'logs2403/1obs_ree_0.01_2.csv'
+%      'logs2403/1obs_ree_0.01_3.csv'
 %      'logs2403/1obs_rho=5_1.csv'
 %      'logs/1obs_ree_5.csv'
 };
@@ -14,10 +15,11 @@ target = [-0.475, 0.110, 0.200];
 
 % Obstacle
 obs_list = [
- -0.35, 0.112, 0.200;
+ -0.35, 0.100, 0.198;
 ];
 
 axes_list = [
+    %0.025, 0.025, 0.025;
    0.02, 0.02, 0.02;
 ];
 
@@ -163,3 +165,47 @@ axis equal; grid on;
 view(3);
 
 legend(legend_entries);
+
+
+
+%%%%%vận tốc
+
+%% ====== VELOCITY ANALYSIS ======
+figure; 
+subplot(2,1,1); hold on;
+for k = 1:length(filenames)
+    data = readtable(filenames{k});
+    
+    % Tính thời gian tương đối bắt đầu từ 0
+    t = data.timestamp - data.timestamp(1);
+    
+    % Lấy các thành phần vận tốc tuyến tính
+    vx = data.actual_TCP_speed_0;
+    vy = data.actual_TCP_speed_1;
+    vz = data.actual_TCP_speed_2;
+    
+    % Tính độ lớn vận tốc tổng hợp (Norm)
+    v_norm = sqrt(vx.^2 + vy.^2 + vz.^2);
+    
+    plot(t, v_norm, 'LineWidth', 2, 'Color', colors(k,:));
+end
+grid on;
+xlabel('Time (s)');
+ylabel('Speed (m/s)');
+title('TCP Speed Magnitude');
+legend(legend_entries(1:length(filenames)));
+
+subplot(2,1,2); hold on;
+% Vẽ chi tiết các trục của file đầu tiên để phân tích
+if ~isempty(filenames)
+    data = readtable(filenames{1});
+    t = data.timestamp - data.timestamp(1);
+    plot(t, data.actual_TCP_speed_0, 'r', 'DisplayName', 'v_x');
+    plot(t, data.actual_TCP_speed_1, 'g', 'DisplayName', 'v_y');
+    plot(t, data.actual_TCP_speed_2, 'b', 'DisplayName', 'v_z');
+end
+grid on;
+xlabel('Time (s)');
+ylabel('Velocity (m/s)');
+title('Velocity Components');
+legend show;
