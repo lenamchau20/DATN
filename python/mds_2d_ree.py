@@ -13,7 +13,7 @@ rtde_c = RTDEControlInterface(IP)
 folder = "logs2703"
 os.makedirs(folder, exist_ok=True)
 
-base_name = "0obs"
+base_name = "1obs_ree_0.05"
 i = 1
 
 while True:
@@ -26,29 +26,30 @@ record_vars = ["timestamp", "actual_TCP_pose", "actual_TCP_speed"]
 rtde_r.startFileRecording(filename, record_vars)
 print(f"Running")
 
-#Initial_TCP_Pose = [-200; 110; 200; 1.35; 2.82; 0]
-#initial_TCP_Pose = [-130; 110; 500; 1.5; 3.4; -0.6]
+#Initial_TCP_Pose = [-200; 110; 200; 1.35; 2.82; 0] velocity_bar=100%
+
 # ===== TARGET =====
-#target = np.array([-0.475, 0.110, 0.200])
 target = np.array([-0.475, 0.110, 0.200])
+
 # ===== OBSTACLE (ELLIPSOID) =====
 obs_list = [
-    #np.array([-0.305, 0.105, 0.198]),
-    #np.array([-0.385, 0.112, 0.198]),
-    #np.array([-0.35, 0.09, 0.198])
-    np.array([-0.3, 0.09, 0.34])
+    #np.array([-0.305, 0.108, 0.200]),
+    #np.array([-0.385, 0.112, 0.200])
+    np.array([-0.35, 0.112, 0.198])
 ]
 
 axes_list = [
-    #np.array([0.025, 0.025, 0.025]), #0.025
-    np.array([0.02, 0.04, 0.04])
+    #np.array([0.025, 0.025, 0.025]),
+    np.array([0.02, 0.02, 0.02])
 ]
+
 
 rho_list = [
-    0.5,
-    #1.0
+    #1,
+    0.01
 ]
 
+ree = 0.05
 # ===== PARAM =====
 #techpendant velocity bar: 50% 
 kc = 0.5   
@@ -58,51 +59,72 @@ v_max = 0.15
 def to2d_xz(p3):
     return np.array([p3[0], p3[2]])
 
-# ===== GAMMA FUNCTION =====
-def gamma2d(x2d, obs2d, axes2d):
+def mu2d(x2d, obs2d, axes2d):
     dx = x2d - obs2d
-    return np.sqrt(
+
+    val = np.sqrt(
         (dx[0]/axes2d[0])**2 +
-        #(dx[1]/axes[1])**2 +
-        (dx[1]/axes2d[1])**2
+        (dx[1]/axes2d[1])**2 
     )
+
+    if val < 1e-6:
+        return 1.0  # tránh chia 0
+
+    return 1.0 / val  #mu=1/sqrt
+def gamma_distance2d(x2d, obs2d, axes2d):
+    dx = x2d - obs2d
+    d = np.linalg.norm(dx)
+
+    mu_val = mu2d(x2d, obs2d, axes2d)
+
+    return 1 + max(d * (1 - mu_val), 0)
+
 # ==== GRADIENT GAMMA ======
 def gradient_gamma2d(x2d, obs2d, axes2d):
     dx = x2d - obs2d
-    g = gamma2d(x2d, obs2d, axes2d)
+
+    g = np.sqrt(
+        (dx[0]/axes2d[0])**2 +
+        (dx[1]/axes2d[1])**2 
+        
+    )  #tính lấy gamma 
 
     if g < 1e-6:
         return np.zeros(2)
 
     return np.array([
         dx[0] / (axes2d[0]**2 * g),
-        #dx[1] / (axes[1]**2 * g),
         dx[1] / (axes2d[1]**2 * g)
-    ])
-
+    ]) 
 # ===== MODULATION MATRIX =====
-def modulatedDS_2d(x2d, obs_list, axes_list, rho_list):
+def modulatedDS2d(x2d, obs_list, axes_list, rho_list, ree):
 
     kObst = len(obs_list)
 
     if kObst == 0:
         return np.eye(2)   # ko obstacle -> ko modulate: thoát hàm modulatedDS
     
-    gamma_vals = np.zeros(kObst)
+    gamma_eff = np.ones(kObst)
     grad_gamma = np.zeros((2, kObst))
 
     # ===== COMPUTE GAMMA + GRAD =====
     for k in range(kObst):
-        obs2d  = to2d_xz(obs_list[k])
+        obs2d = to2d_xz(obs_list[k]) 
         axes2d = np.array([axes_list[k][0], axes_list[k][2]])
 
-        gamma_vals[k] = gamma2d(x2d, obs2d, axes2d)
+        g = gamma_distance2d(x2d, obs2d, axes2d)
         grad_gamma[:, k] = gradient_gamma2d(x2d, obs2d, axes2d)
+
+        # ===== APPLY REE (margin) =====
+        if g > 1 + ree:
+            gamma_eff[k] = g - ree
+        else:
+            gamma_eff[k] = 1.0
 
     # ===== g - 1 =====
     eps_d = 1e-9
-    gminus1 = np.maximum(gamma_vals - 1, eps_d)
-
+    #gminus1 = np.maximum(gamma_vals - 1, eps_d)
+    gminus1 = np.maximum(gamma_eff - 1, eps_d)
     M_total = np.eye(2)
 
     # ===== LOOP OBSTACLES =====
@@ -133,10 +155,10 @@ def modulatedDS_2d(x2d, obs_list, axes_list, rho_list):
         t = np.array([-n[1], n[0]]) #(-nz, nx)
         E = np.column_stack((n, t))
 
-        g = max(gamma_vals[k], 1.0001)
+        g_eff = max(gamma_eff[k], 1.0001)
 
-        lam1 = 1 - weight / (g ** (1 / rho_list[k]))
-        lam2 = 1 + weight / (g ** (1 / rho_list[k]))
+        lam1 = 1 - weight / (g_eff ** (1 / rho_list[k]))
+        lam2 = 1 + weight / (g_eff ** (1 / rho_list[k]))
 
         D = np.diag([lam1, lam2])
         Mk = E @ D @ E.T
@@ -150,7 +172,7 @@ def check_collision_2d(x2d, obs_list, axes_list):
         obs2d  = to2d_xz(obs_list[k])
         axes2d = np.array([axes_list[k][0], axes_list[k][2]])
 
-        if gamma2d(x2d, obs2d, axes2d) <= 1.0:
+        if gamma_distance2d(x2d, obs2d, axes2d) <= 1.0:
             return True
     return False
 # ===== MAIN LOOP =====
@@ -162,7 +184,7 @@ try:
         loop_start = time.time()
 
         t_start = rtde_c.initPeriod()
-
+        
         step_count += 1
         elapsed = step_count * dt
 
@@ -174,31 +196,29 @@ try:
         x2d = to2d_xz(x_curr)
         target2d = to2d_xz(target)
 
-        # ===== COLLISION CHECK 2D =====
+         # ===== COLLISION CHECK =====
         if check_collision_2d(x2d, obs_list, axes_list):
             print("\n COLLISION WARNING!")
             rtde_c.speedStop()
             break
-
         # ===== NOMINAL 2D DS =====
         v_nominal_2d = -kc * (x2d - target2d)
 
         # ===== MDS 2D =====
-        M2d = modulatedDS_2d(x2d, obs_list, axes_list, rho_list)
+        M2d = modulatedDS2d(x2d, obs_list, axes_list, rho_list, ree)
         v_safe_2d = M2d @ v_nominal_2d
 
-        # ===== LIMIT SPEED =====
+         # ===== LIMIT SPEED =====
         norm_v = np.linalg.norm(v_safe_2d)
         if norm_v > v_max:
             v_safe_2d = v_safe_2d / norm_v * v_max
-
         # ===== MAP LẠI 3D =====
         #v_y_nominal = -kc * (x_curr[1] - target[1])
         v_safe = np.array([v_safe_2d[0], 0.0, v_safe_2d[1]])
 
         # ===== STOP CONDITION =====
-        dist = np.linalg.norm(x_curr - target)
-        if dist < 0.005:
+        dist = np.linalg.norm(x2d - target2d)
+        if dist < 0.01:
             total_time = elapsed
             rtde_c.speedL([0,0,0,0,0,0], 0.2, dt)
             print(f"\nReached target! x=[{x_curr[0]:.4f}, {x_curr[1]:.4f}, {x_curr[2]:.4f}] Time = {total_time:.2f} s")
@@ -216,7 +236,7 @@ try:
         rtde_c.kickWatchdog()
         loop_time = time.time() - loop_start
 
-        if loop_time > 0.05:
+        if loop_time > 0.1:
             print(f"\n LOOP SLOW: {loop_time:.4f}s")
 
 except KeyboardInterrupt:
