@@ -3,24 +3,24 @@ clc; clear; close all;
 %% ====== CONFIG ======
 filenames = {
 
-     'logs2703/1obs_ree_0.01.csv'
-      'logs2703/1obs_ree_0.03_1.csv'
-        'logs2703/1obs_ree_0.05_1.csv'
-%      'logs2403/1obs_rho=5_1.csv'
-%      'logs/1obs_ree_5.csv'
+     'logs_pro_0905/obs_1.csv'
 };
 
 % Target
+%target = [-0.475, 0.110, 0.300];
 target = [-0.475, 0.110, 0.200];
-
 % Obstacle
 obs_list = [
--0.35, 0.112, 0.198
+%-0.235, 0.110, 0.250;
+-0.355, 0.110, 0.235;
+%-0.355, 0.110, 0.278;
+%-0.235, 0.110, 0.290;
 ];
 
 axes_list = [
-%     0.025, 0.025, 0.025;
-   0.02, 0.02, 0.02;
+     0.025, 0.025, 0.025;
+     %0.025, 0.025, 0.025;
+     %0,0,0;
 ];
 
 colors = lines(length(filenames)); % màu tự động
